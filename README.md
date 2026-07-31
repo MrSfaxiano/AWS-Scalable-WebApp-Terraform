@@ -1,18 +1,18 @@
-# Shopfront — Scalable Web Application on AWS
+# Shopfront: Scalable Web Application on AWS
 
-A production-representative, highly available web application architecture built entirely with Terraform, developed as a graduation project for the AWS Solutions Architect – Associate certification track.
+A production-representative, highly available web application architecture built entirely with Terraform, developed as a graduation project for [Manara tech](https://manara.tech/)'s AWS Solutions Architect - Associate certification track.
 
 ## The story
 
-Shopfront started as a single EC2 instance running an app. This project walks through the same evolution any growing system goes through — a server dies and takes the whole app down, so we need multiple Availability Zones; traffic spikes and one server can't keep up, so we need Auto Scaling; a public-facing app becomes a target, so we need a WAF; a single database instance is a single point of failure for the most critical asset — customer data — so we need Multi-AZ RDS. Each AWS service in this project exists because of a specific problem, not because it looked good on a resume.
+Shopfront started as a single EC2 instance running an app. This project walks through the same evolution any growing system goes through. A server dies and takes the whole app down, so we need multiple Availability Zones. Traffic spikes and one server can't keep up, so we need Auto Scaling. A public-facing app becomes a target, so we need a WAF to protect it. A single database instance is a single point of failure for the most critical asset: customer data, so we need Multi-AZ RDS. Each AWS service in this project exists to solve a specific problem.
 
-Full write-up of that reasoning, chapter by chapter, is in [`docs/decisions.md`](docs/decisions.md).
+Full write-up of that reasoning, is in [`docs/decisions.md`](docs/decisions.md), please take a look!
 
 ## Architecture
 
 ![Architecture diagram](diagram/architecture.png)
 
-**Request flow:** Internet users → Route 53 (DNS + health checks) / CloudFront (edge caching) → Application Load Balancer (behind AWS WAF) → Auto Scaling Group of EC2 instances in private subnets → RDS PostgreSQL (Multi-AZ, private subnets). CloudWatch and SNS monitor every layer. Administrative access to instances is via SSM Session Manager — no SSH, no bastion host, no open inbound ports on the app tier.
+**Request flow:** Internet users → Route 53 (DNS + health checks) / CloudFront (edge caching) → Application Load Balancer (behind AWS WAF) → Auto Scaling Group of EC2 instances in private subnets → RDS PostgreSQL (Multi-AZ, private subnets). CloudWatch and SNS monitor every layer. Administrative access to instances is via SSM Session Manager. No SSH, no bastion host, no open inbound ports on the app tier, as required by the project description.
 
 ## AWS services used
 
@@ -58,8 +58,8 @@ project1-scalable-webapp/
 ## Prerequisites
 
 - Terraform >= 1.5
-- AWS CLI v2, configured with an IAM user (not root) that has sufficient permissions
-- An S3 bucket and DynamoDB table for Terraform remote state (created once, manually, before first use — see below)
+- AWS CLI v2, configured with an IAM user (not root) that has sufficient permissions (administrative permissions added)
+- An S3 bucket and DynamoDB table for Terraform remote state (created once, manually, before first use, see below)
 - The [Session Manager plugin](https://docs.aws.amazon.com/systems-manager/latest/userguide/session-manager-working-with-install-plugin.html) installed locally, if you want to connect to instances via SSM
 
 ## One-time backend setup
@@ -92,7 +92,7 @@ terraform plan
 terraform apply
 ```
 
-**Expect roughly 15–20 minutes total** for a full `apply` from scratch — most resources provision in seconds, but Multi-AZ RDS (5–10 min) and CloudFront (10–15 min) are both slow by nature. Everything else in the stack finishes quickly.
+**Expect roughly 15–20 minutes total** for a full `apply` from scratch, most resources provision in seconds, but Multi-AZ RDS (5–10 min) and CloudFront (10–15 min) are both slow by nature. Everything else in the stack finishes quickly.
 
 ## Verifying it actually works
 
@@ -120,11 +120,11 @@ Every layer of this architecture was verified end to end during the build, not j
 
 ## Cost management
 
-This project is built to be destroyed and rebuilt cheaply between work sessions:
+This project is built to be destroyed and rebuilt cheaply between work sessions, as the account is free trial and resources are limited:
 
 - A CloudWatch billing alarm is set up before any infrastructure is created.
 - `skip_final_snapshot = true` on RDS allows clean teardown without orphaned snapshots.
-- The habit throughout the build: `terraform destroy` at the end of every session, `terraform apply` to bring it back — full rebuild takes under 20 minutes.
+- The habit throughout the build: `terraform destroy` at the end of every session, `terraform apply` to bring it back, full rebuild takes under 20 minutes.
 - Biggest cost drivers while running: NAT Gateway (~$1/day), Multi-AZ RDS (~$1–2/day depending on instance class), ALB (~$0.75/day). CloudFront, Route 53, and monitoring resources are all negligible in comparison.
 
-See [`docs/decisions.md`](docs/decisions.md) for the full reasoning behind every cost/scope tradeoff made in this project, plus real debugging incidents encountered along the way (an SSM agent that wasn't actually pre-installed on the AMI, Terraform AMI drift, and a CloudWatch dimension mismatch that silently produced empty dashboard widgets) — the kind of things you only learn by actually building and breaking infrastructure, not by reading about it.
+See [`docs/decisions.md`](docs/decisions.md) for the full reasoning behind every cost/scope tradeoff made in this project, plus real debugging incidents encountered along the way (an SSM agent that wasn't actually pre-installed on the AMI, Terraform AMI drift, and a CloudWatch dimension mismatch that silently produced empty dashboard widgets), true hurdles and issues one might encounter in a real production environment one day, truly a good learning experience.
