@@ -96,7 +96,7 @@ terraform apply
 
 ## Verifying it actually works
 
-Every layer of this architecture was verified end to end during the build, not just deployed and assumed working:
+Every layer of this architecture was verified end to end during the build:
 
 1. **Compute + SSM:** `aws ssm start-session --target <instance-id>` connects with zero open inbound ports.
 2. **ALB + WAF:** `curl http://<alb-dns-name>` returns the app response, load-balanced across both AZs.
